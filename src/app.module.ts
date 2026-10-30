@@ -8,6 +8,9 @@ import { LoggingPlugin } from './common/plugins/logging.js';
 import { Request, Response } from 'express';
 import { LoaderRegistry } from './common/loaders/loaders.js';
 import { ConfigModule } from '@nestjs/config';
+import { ProfileModule } from './profile/profile.module.js';
+
+const isProd = process.env.NODE_ENV === 'production';
 
 @Module({
   imports: [
@@ -16,9 +19,10 @@ import { ConfigModule } from '@nestjs/config';
       imports: [],
       inject: [],
       useFactory: () => ({
-        autoSchemaFile: 'schema.gql',
+        autoSchemaFile: isProd ? true : 'schema.gql',
         plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
         playground: false,
+        introspection: true,
         context: ({
           req,
           res,
@@ -34,7 +38,8 @@ import { ConfigModule } from '@nestjs/config';
     }),
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    ProfileModule,
   ],
   providers: [LoggingPlugin],
 })
-export class AppModule {}
+export class AppModule { }

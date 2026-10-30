@@ -1,20 +1,77 @@
 services:
   db:
-    container_name: portfolio-db
+    container_name: profile-db
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: portfolio
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d library"]
+      test: ["CMD-SHELL", "pg_isready -U app -d profile"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: npx prisma migrate deploy
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  seed:
+    profiles: ["seed"]
+    build:
+      context: .
+      target: builder
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: npx prisma db seed
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  app:
+    container_name: profile-app
+    build:
+      context: .
+      target: runner
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Test environment
+  db-test:
+    container_name: profile-db-test
+    image: postgres:16-alpine
+    profiles: ["test"]
+    environment:
+      - POSTGRES_USER=${TEST_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${TEST_POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d profile_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
 volumes:
   pgdata:

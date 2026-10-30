@@ -1,0 +1,20 @@
+FROM node:24-alpine AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package*.json ./
+RUN npm ci --ignore-scripts
+
+FROM deps AS builder
+COPY . .
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
+  npx prisma generate \
+  && npm run build
+
+FROM base AS runner
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
+COPY --from=builder /app/dist ./dist
+EXPOSE 3000
+CMD ["node", "dist/main.js"]
