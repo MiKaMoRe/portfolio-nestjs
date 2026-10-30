@@ -2,10 +2,11 @@ services:
   - type: web
     name: profile-app
     runtime: docker
+    plan: starter
     dockerfilePath: ./Dockerfile
     dockerContext: .
     dockerTarget: runner
-    plan: starter
+    preDeployCommand: npx prisma migrate deploy && npx prisma db seed
     envVars:
       - key: DATABASE_URL
         fromDatabase:
