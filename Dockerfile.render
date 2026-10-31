@@ -17,6 +17,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma7.config.ts ./
+COPY --from=builder /app/src/generated ./src/generated
 COPY docker-entrypoint.render.sh ./
 RUN chmod +x docker-entrypoint.render.sh
 
